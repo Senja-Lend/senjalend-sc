@@ -143,25 +143,25 @@ contract DevSenja is Script, Helper {
             elevatedminterburner.setOperator(address(oftETHadapter), true);
             oftweth = address(oftETHadapter);
         } else {
-            elevatedminterburner = new ElevatedMinterBurner(address(ARB_MOCK_USDC), owner);
+            elevatedminterburner = new ElevatedMinterBurner(address(ARB_MOCK_USDCK), owner);
             console.log("address public ARB_MOCK_USDC_ELEVATED_MINTER_BURNER =", address(elevatedminterburner), ";");
             oftusdtadapter =
-                new OFTUSDTadapter(address(ARB_MOCK_USDC), address(elevatedminterburner), ARB_LZ_ENDPOINT, owner);
+                new OFTUSDTadapter(address(ARB_MOCK_USDCK), address(elevatedminterburner), ARB_LZ_ENDPOINT, owner);
             console.log("address public ARB_OFT_MOCK_USDC_ADAPTER =", address(oftusdtadapter), ";");
             elevatedminterburner.setOperator(address(oftusdtadapter), true);
             oftusdc = address(oftusdtadapter);
 
-            elevatedminterburner = new ElevatedMinterBurner(address(ARB_MOCK_USDT), owner);
+            elevatedminterburner = new ElevatedMinterBurner(address(ARB_MOCK_USDTK), owner);
             console.log("address public ARB_MOCK_USDT_ELEVATED_MINTER_BURNER =", address(elevatedminterburner), ";");
             oftusdtadapter =
-                new OFTUSDTadapter(address(ARB_MOCK_USDT), address(elevatedminterburner), ARB_LZ_ENDPOINT, owner);
+                new OFTUSDTadapter(address(ARB_MOCK_USDTK), address(elevatedminterburner), ARB_LZ_ENDPOINT, owner);
             console.log("address public ARB_OFT_MOCK_USDT_ADAPTER =", address(oftusdtadapter), ";");
             elevatedminterburner.setOperator(address(oftusdtadapter), true);
             oftusdt = address(oftusdtadapter);
 
-            elevatedminterburner = new ElevatedMinterBurner(ARB_MOCK_WETH, owner);
+            elevatedminterburner = new ElevatedMinterBurner(ARB_MOCK_WETHK, owner);
             console.log("address public ARB_MOCK_WETH_ELEVATED_MINTER_BURNER =", address(elevatedminterburner), ";");
-            oftETHadapter = new OFTETHadapter(ARB_MOCK_WETH, address(elevatedminterburner), ARB_LZ_ENDPOINT, owner);
+            oftETHadapter = new OFTETHadapter(ARB_MOCK_WETHK, address(elevatedminterburner), ARB_LZ_ENDPOINT, owner);
             console.log("address public ARB_OFT_MOCK_WETH_ADAPTER =", address(oftETHadapter), ";");
             elevatedminterburner.setOperator(address(oftETHadapter), true);
             oftweth = address(oftETHadapter);
@@ -226,17 +226,17 @@ contract DevSenja is Script, Helper {
             MyOApp(BASE_OFT_MOCK_USDT_ADAPTER).setPeer(BASE_EID, bytes32(uint256(uint160(BASE_OFT_MOCK_USDT_ADAPTER))));
             MyOApp(BASE_OFT_MOCK_WETH_ADAPTER).setPeer(BASE_EID, bytes32(uint256(uint160(BASE_OFT_MOCK_WETH_ADAPTER))));
 
-            MyOApp(BASE_OFT_MOCK_USDC_ADAPTER).setPeer(ARB_EID, bytes32(uint256(uint160(ARB_OFT_MOCK_USDC_ADAPTER))));
-            MyOApp(BASE_OFT_MOCK_USDT_ADAPTER).setPeer(ARB_EID, bytes32(uint256(uint160(ARB_OFT_MOCK_USDT_ADAPTER))));
-            MyOApp(BASE_OFT_MOCK_WETH_ADAPTER).setPeer(ARB_EID, bytes32(uint256(uint160(ARB_OFT_MOCK_WETH_ADAPTER))));
+            MyOApp(BASE_OFT_MOCK_USDC_ADAPTER).setPeer(ARB_EID, bytes32(uint256(uint160(ARB_OFT_MOCK_USDCK_ADAPTER))));
+            MyOApp(BASE_OFT_MOCK_USDT_ADAPTER).setPeer(ARB_EID, bytes32(uint256(uint160(ARB_OFT_MOCK_USDTK_ADAPTER))));
+            MyOApp(BASE_OFT_MOCK_WETH_ADAPTER).setPeer(ARB_EID, bytes32(uint256(uint160(ARB_OFT_MOCK_WETHK_ADAPTER))));
         } else if (block.chainid == 42161) {
-            MyOApp(ARB_OFT_MOCK_USDC_ADAPTER).setPeer(ARB_EID, bytes32(uint256(uint160(ARB_OFT_MOCK_USDC_ADAPTER))));
-            MyOApp(ARB_OFT_MOCK_USDT_ADAPTER).setPeer(ARB_EID, bytes32(uint256(uint160(ARB_OFT_MOCK_USDT_ADAPTER))));
-            MyOApp(ARB_OFT_MOCK_WETH_ADAPTER).setPeer(ARB_EID, bytes32(uint256(uint160(ARB_OFT_MOCK_WETH_ADAPTER))));
+            MyOApp(ARB_OFT_MOCK_USDCK_ADAPTER).setPeer(ARB_EID, bytes32(uint256(uint160(ARB_OFT_MOCK_USDCK_ADAPTER))));
+            MyOApp(ARB_OFT_MOCK_USDTK_ADAPTER).setPeer(ARB_EID, bytes32(uint256(uint160(ARB_OFT_MOCK_USDTK_ADAPTER))));
+            MyOApp(ARB_OFT_MOCK_WETHK_ADAPTER).setPeer(ARB_EID, bytes32(uint256(uint160(ARB_OFT_MOCK_WETHK_ADAPTER))));
 
-            MyOApp(ARB_OFT_MOCK_USDC_ADAPTER).setPeer(BASE_EID, bytes32(uint256(uint160(BASE_OFT_MOCK_USDC_ADAPTER))));
-            MyOApp(ARB_OFT_MOCK_USDT_ADAPTER).setPeer(BASE_EID, bytes32(uint256(uint160(BASE_OFT_MOCK_USDT_ADAPTER))));
-            MyOApp(ARB_OFT_MOCK_WETH_ADAPTER).setPeer(BASE_EID, bytes32(uint256(uint160(BASE_OFT_MOCK_WETH_ADAPTER))));
+            MyOApp(ARB_OFT_MOCK_USDCK_ADAPTER).setPeer(BASE_EID, bytes32(uint256(uint160(BASE_OFT_MOCK_USDC_ADAPTER))));
+            MyOApp(ARB_OFT_MOCK_USDTK_ADAPTER).setPeer(BASE_EID, bytes32(uint256(uint160(BASE_OFT_MOCK_USDT_ADAPTER))));
+            MyOApp(ARB_OFT_MOCK_WETHK_ADAPTER).setPeer(BASE_EID, bytes32(uint256(uint160(BASE_OFT_MOCK_WETH_ADAPTER))));
         }
     }
 
@@ -252,9 +252,9 @@ contract DevSenja is Script, Helper {
             MyOApp(BASE_OFT_MOCK_USDT_ADAPTER).setEnforcedOptions(enforcedOptions);
             MyOApp(BASE_OFT_MOCK_WETH_ADAPTER).setEnforcedOptions(enforcedOptions);
         } else if (block.chainid == 42161) {
-            MyOApp(ARB_OFT_MOCK_USDC_ADAPTER).setEnforcedOptions(enforcedOptions);
-            MyOApp(ARB_OFT_MOCK_USDT_ADAPTER).setEnforcedOptions(enforcedOptions);
-            MyOApp(ARB_OFT_MOCK_WETH_ADAPTER).setEnforcedOptions(enforcedOptions);
+            MyOApp(ARB_OFT_MOCK_USDCK_ADAPTER).setEnforcedOptions(enforcedOptions);
+            MyOApp(ARB_OFT_MOCK_USDTK_ADAPTER).setEnforcedOptions(enforcedOptions);
+            MyOApp(ARB_OFT_MOCK_WETHK_ADAPTER).setEnforcedOptions(enforcedOptions);
         }
     }
 

@@ -22,28 +22,39 @@ contract SenjaCoreContracts is Script, Helper {
     PositionDeployer public positionDeployer;
     LendingPoolFactory public lendingPoolFactory;
     ERC1967Proxy public proxy;
+    bool isDeployed = false;
 
     function run() public {
         vm.createSelectFork(vm.rpcUrl("base_mainnet"));
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
-        liquidator = new Liquidator();
-        isHealthy = new IsHealthy(address(liquidator));
-        lendingPoolDeployer = new LendingPoolDeployer();
-        lendingPoolRouterDeployer = new LendingPoolRouterDeployer();
-        protocol = new Protocol();
-        positionDeployer = new PositionDeployer();
 
-        lendingPoolFactory = new LendingPoolFactory();
-        bytes memory data = abi.encodeWithSelector(
-            lendingPoolFactory.initialize.selector,
-            address(isHealthy),
-            address(lendingPoolRouterDeployer),
-            address(lendingPoolDeployer),
-            address(protocol),
-            address(positionDeployer)
-        );
-        proxy = new ERC1967Proxy(address(lendingPoolFactory), data);
+        if (!isDeployed) {
+            liquidator = new Liquidator();
+            isHealthy = new IsHealthy(address(liquidator));
+            lendingPoolDeployer = new LendingPoolDeployer();
+            lendingPoolRouterDeployer = new LendingPoolRouterDeployer();
+            protocol = new Protocol();
+            positionDeployer = new PositionDeployer();
 
+            lendingPoolFactory = new LendingPoolFactory();
+            bytes memory data = abi.encodeWithSelector(
+                lendingPoolFactory.initialize.selector,
+                address(isHealthy),
+                address(lendingPoolRouterDeployer),
+                address(lendingPoolDeployer),
+                address(protocol),
+                address(positionDeployer)
+            );
+            proxy = new ERC1967Proxy(address(lendingPoolFactory), data);
+        } else {
+            liquidator = Liquidator(payable(BASE_liquidator));
+            isHealthy = IsHealthy(BASE_isHealthy);
+            lendingPoolDeployer = LendingPoolDeployer(BASE_lendingPoolDeployer);
+            lendingPoolRouterDeployer = LendingPoolRouterDeployer(BASE_lendingPoolRouterDeployer);
+            protocol = Protocol(payable(BASE_protocol));
+            positionDeployer = PositionDeployer(BASE_positionDeployer);
+            lendingPoolFactory = LendingPoolFactory(BASE_lendingPoolFactoryProxy);
+        }
         lendingPoolDeployer.setFactory(address(proxy));
         lendingPoolRouterDeployer.setFactory(address(proxy));
 
@@ -55,6 +66,12 @@ contract SenjaCoreContracts is Script, Helper {
         IFactory(address(proxy)).addTokenDataStream(BASE_MOCK_USDC, BASE_usdc_usd_adapter);
         IFactory(address(proxy)).addTokenDataStream(BASE_MOCK_USDT, BASE_usdt_usd_adapter);
         IFactory(address(proxy)).addTokenDataStream(BASE_MOCK_WETH, BASE_eth_usd_adapter);
+
+        IFactory(address(proxy)).setPositionDeployer(address(positionDeployer));
+        IFactory(address(proxy)).setLendingPoolDeployer(address(lendingPoolDeployer));
+        IFactory(address(proxy)).setLendingPoolRouterDeployer(address(lendingPoolRouterDeployer));
+        IFactory(address(proxy)).setProtocol(address(protocol));
+        IFactory(address(proxy)).setIsHealthy(address(isHealthy));
 
         vm.stopBroadcast();
         if (block.chainid == 8453) {
@@ -79,4 +96,5 @@ contract SenjaCoreContracts is Script, Helper {
 
 // RUN
 // forge script SenjaCoreContracts --broadcast -vvv --verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY
+// forge script SenjaCoreContracts --broadcast -vvv
 // forge script SenjaCoreContracts -vvv

@@ -86,4 +86,47 @@ interface IFactory {
     function setOftAddress(address _token, address _oftAddress) external;
 
     function setPositionDeployer(address _positionDeployer) external;
+
+    /**
+     * @dev Sets the lending pool deployer address
+     * @param _lendingPoolDeployer Address of the lending pool deployer contract
+     */
+    function setLendingPoolDeployer(address _lendingPoolDeployer) external;
+
+    /**
+     * @dev Sets the protocol contract address
+     * @param _protocol Address of the protocol contract
+     */
+    function setProtocol(address _protocol) external;
+
+    /**
+     * @dev Sets the health check contract address
+     * @param _isHealthy Address of the isHealthy contract
+     */
+    function setIsHealthy(address _isHealthy) external;
+
+    /**
+     * @dev Sets the lending pool router deployer address
+     * @param _lendingPoolRouterDeployer Address of the lending pool router deployer contract
+     */
+    function setLendingPoolRouterDeployer(address _lendingPoolRouterDeployer) external;
+
+    /**
+     * @dev Sets the operator status for an address
+     * @param _operator Address of the operator
+     * @param _status Status of the operator (true/false)
+     */
+    function setOperator(address _operator, bool _status) external;
+
+    /**
+     * @dev Returns the lending pool deployer address
+     * @return Address of the lending pool deployer contract
+     */
+    function lendingPoolDeployer() external view returns (address);
+
+    /**
+     * @dev Returns the lending pool router deployer address
+     * @return Address of the lending pool router deployer contract
+     */
+    function lendingPoolRouterDeployer() external view returns (address);
 }

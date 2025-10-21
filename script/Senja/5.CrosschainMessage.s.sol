@@ -194,7 +194,7 @@ contract CrosschainMessage is Script, Helper {
         if (block.chainid == 8453) {
             OAppSupplyLiquidityUSDT(BASE_oappSupplyLiquidityUSDT).setOFTaddress(BASE_OFT_USDT_ADAPTER);
         } else if (block.chainid == 10) {
-            OAppSupplyLiquidityUSDT(ARB_oappSupplyLiquidityUSDT).setOFTaddress(ARB_OFT_MOCK_USDT_ADAPTER);
+            OAppSupplyLiquidityUSDT(ARB_oappSupplyLiquidityUSDT).setOFTaddress(ARB_OFT_MOCK_USDTK_ADAPTER);
         }
     }
 

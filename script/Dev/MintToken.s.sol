@@ -12,12 +12,12 @@ interface IToken {
 
 contract MintToken is Script, Helper {
     // address public minter = vm.envAddress("PUBLIC_KEY");
-    address public minter = ARB_OFT_MOCK_USDT_ADAPTER;
-    address public token = ARB_MOCK_USDT;
+    address public minter = ARB_OFT_MOCK_USDTK_ADAPTER;
+    address public token = ARB_MOCK_USDTK;
     uint256 public amount = 100_000;
 
     function run() public {
-        // vm.createSelectFork(vm.rpcUrl("aRB_mainnet"));
+        // vm.createSelectFork(vm.rpcUrl("arb_mainnet"));
         // vm.createSelectFork(vm.rpcUrl("base_mainnet"));
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
         // IToken(token).setOperator(minter, true);

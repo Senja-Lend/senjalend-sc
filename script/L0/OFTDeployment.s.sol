@@ -16,11 +16,15 @@ import {ExecutorConfig} from "@layerzerolabs/lz-evm-messagelib-v2/contracts/Send
 import {EnforcedOptionParam} from "@layerzerolabs/oapp-evm/contracts/oapp/libs/OAppOptionsType3.sol";
 import {OptionsBuilder} from "@layerzerolabs/oapp-evm/contracts/oapp/libs/OptionsBuilder.sol";
 import {MyOApp} from "../../src/layerzero/MyOApp.sol";
+import {USDCk} from "../../src/BridgeToken/USDCk.sol";
+import {USDTk} from "../../src/BridgeToken/USDTk.sol";
+import {WETHk} from "../../src/BridgeToken/WETHk.sol";
+import {WBTCk} from "../../src/BridgeToken/WBTCk.sol";
+import {ElevatedMinterBurner} from "../../src/layerzero/ElevatedMinterBurner.sol";
 
 contract OFTDeployment is Script, Helper {
     using OptionsBuilder for bytes;
 
-    ElevatedMinterBurner public elevatedminterburner;
     OFTUSDTadapter public oftusdtadapter;
     OFTUSDCadapter public oftusdcadapter;
     OFTWETHadapter public oftwethadapter;
@@ -29,6 +33,11 @@ contract OFTDeployment is Script, Helper {
     OFTWETHadapter public oftmockwethadapter;
     OFTETHadapter public oftETHadapter;
     OFTWBTCadapter public oftwbtcadapter;
+    USDCk public usdck;
+    USDTk public usdtk;
+    WBTCk public wbtck;
+    WETHk public wethk;
+    ElevatedMinterBurner public elevatedminterburner;
 
     address owner = vm.envAddress("PUBLIC_KEY");
     uint256 privateKey = vm.envUint("PRIVATE_KEY");
@@ -54,12 +63,14 @@ contract OFTDeployment is Script, Helper {
     uint32 constant RECEIVE_CONFIG_TYPE = 2;
     uint16 constant SEND = 1; // Message type for sendString function
 
-    bool isDeployed = false;
+    bool isDeployed = true;
 
     function run() public {
         vm.createSelectFork(vm.rpcUrl("base_mainnet"));
+        // vm.createSelectFork(vm.rpcUrl("arb_mainnet"));
         vm.startBroadcast(privateKey);
         console.log("deployed on ChainId: ", block.chainid);
+        _deployRepresentativeToken();
         _getUtils();
         _deployOFT();
         _setLibraries();
@@ -96,10 +107,52 @@ contract OFTDeployment is Script, Helper {
         }
     }
 
+    function _deployRepresentativeToken() internal {
+        usdtk = new USDTk();
+        ARB_USDTK = address(usdtk);
+        console.log("address public ARB_USDTK =", address(usdtk), ";");
+        elevatedminterburner = new ElevatedMinterBurner(address(ARB_USDTK), owner);
+        console.log("address public ARB_USDTK_ELEVATED_MINTER_BURNER =", address(elevatedminterburner), ";");
+        oftusdtadapter = new OFTUSDTadapter(address(ARB_USDTK), address(elevatedminterburner), ARB_LZ_ENDPOINT, owner);
+        console.log("address public ARB_OFT_USDTK_ADAPTER =", address(oftusdtadapter), ";");
+        elevatedminterburner.setOperator(address(oftusdtadapter), true);
+        usdtk.setOperator(address(elevatedminterburner), true);
+
+        usdck = new USDCk();
+        ARB_USDCK = address(usdck);
+        console.log("address public ARB_USDCK =", address(usdck), ";");
+        elevatedminterburner = new ElevatedMinterBurner(address(ARB_USDCK), owner);
+        console.log("address public ARB_USDCK_ELEVATED_MINTER_BURNER =", address(elevatedminterburner), ";");
+        oftusdcadapter = new OFTUSDCadapter(address(ARB_USDCK), address(elevatedminterburner), ARB_LZ_ENDPOINT, owner);
+        console.log("address public ARB_OFT_USDCK_ADAPTER =", address(oftusdcadapter), ";");
+        elevatedminterburner.setOperator(address(oftusdcadapter), true);
+        usdck.setOperator(address(elevatedminterburner), true);
+
+        wbtck = new WBTCk();
+        ARB_WBTCK = address(wbtck);
+        console.log("address public ARB_WBTCK =", address(ARB_WBTCK), ";");
+        elevatedminterburner = new ElevatedMinterBurner(address(ARB_WBTCK), owner);
+        console.log("address public ARB_WBTCK_ELEVATED_MINTER_BURNER =", address(elevatedminterburner), ";");
+        oftwbtcadapter = new OFTWBTCadapter(address(ARB_WBTCK), address(elevatedminterburner), ARB_LZ_ENDPOINT, owner);
+        console.log("address public ARB_OFT_WBTCK_ADAPTER =", address(oftwbtcadapter), ";");
+        elevatedminterburner.setOperator(address(oftwbtcadapter), true);
+        wbtck.setOperator(address(elevatedminterburner), true);
+
+        wethk = new WETHk();
+        ARB_WETHK = address(wethk);
+        console.log("address public ARB_WETHK =", address(ARB_WETHK), ";");
+        elevatedminterburner = new ElevatedMinterBurner(address(ARB_WETHK), owner);
+        console.log("address public ARB_WETHK_ELEVATED_MINTER_BURNER =", address(elevatedminterburner), ";");
+        oftwethadapter = new OFTWETHadapter(address(ARB_WETHK), address(elevatedminterburner), ARB_LZ_ENDPOINT, owner);
+        console.log("address public ARB_OFT_WETHK_ADAPTER =", address(oftwethadapter), ";");
+        elevatedminterburner.setOperator(address(oftwethadapter), true);
+        wethk.setOperator(address(elevatedminterburner), true);
+    }
+
     function _deployOFT() internal {
         if (!isDeployed) {
             oftusdtadapter =
-                new OFTUSDTadapter(block.chainid == 8453 ? BASE_USDT : ARB_USDT, address(0), endpoint, owner);
+                new OFTUSDTadapter(block.chainid == 8453 ? BASE_USDT : ARB_USDTK, address(0), endpoint, owner);
             block.chainid == 8453
                 ? console.log("address public BASE_OFT_USDT_ADAPTER = %s;", address(oftusdtadapter))
                 : console.log("address public ARB_OFT_USDT_ADAPTER = %s;", address(oftusdtadapter));
@@ -111,49 +164,52 @@ contract OFTDeployment is Script, Helper {
                 : console.log("address public ARB_OFT_USDC_ADAPTER = %s;", address(oftusdcadapter));
 
             oftwbtcadapter =
-                new OFTWBTCadapter(block.chainid == 8453 ? BASE_WBTC : ARB_WBTC, address(0), endpoint, owner);
+                new OFTWBTCadapter(block.chainid == 8453 ? BASE_WBTC : ARB_WBTCK, address(0), endpoint, owner);
             block.chainid == 8453
                 ? console.log("address public BASE_OFT_WBTC_ADAPTER = %s;", address(oftwbtcadapter))
                 : console.log("address public ARB_OFT_WBTC_ADAPTER = %s;", address(oftwbtcadapter));
 
             oftwethadapter =
-                new OFTWETHadapter(block.chainid == 8453 ? BASE_WETH : ARB_WETH, address(0), endpoint, owner);
+                new OFTWETHadapter(block.chainid == 8453 ? BASE_WETH : ARB_WETHK, address(0), endpoint, owner);
             block.chainid == 8453
                 ? console.log("address public BASE_OFT_WETH_ADAPTER = %s;", address(oftwethadapter))
                 : console.log("address public ARB_OFT_WETH_ADAPTER = %s;", address(oftwethadapter));
 
             oftmockusdtadapter =
-                new OFTUSDTadapter(block.chainid == 8453 ? BASE_MOCK_USDT : ARB_MOCK_USDT, address(0), endpoint, owner);
+                new OFTUSDTadapter(block.chainid == 8453 ? BASE_MOCK_USDT : ARB_MOCK_USDTK, address(0), endpoint, owner);
             block.chainid == 8453
-                ? console.log("address public BASE_OFT_USDT_ADAPTER = %s;", address(oftmockusdtadapter))
-                : console.log("address public ARB_OFT_USDT_ADAPTER = %s;", address(oftmockusdtadapter));
+                ? console.log("address public BASE_OFT_MOCK_USDT_ADAPTER = %s;", address(oftmockusdtadapter))
+                : console.log("address public ARB_OFT_MOCK_USDT_ADAPTER = %s;", address(oftmockusdtadapter));
 
             oftmockusdcadapter =
-                new OFTUSDCadapter(block.chainid == 8453 ? BASE_MOCK_USDC : ARB_MOCK_USDC, address(0), endpoint, owner);
+                new OFTUSDCadapter(block.chainid == 8453 ? BASE_MOCK_USDC : ARB_MOCK_USDCK, address(0), endpoint, owner);
             block.chainid == 8453
-                ? console.log("address public BASE_OFT_USDC_ADAPTER = %s;", address(oftmockusdcadapter))
-                : console.log("address public ARB_OFT_USDC_ADAPTER = %s;", address(oftmockusdcadapter));
+                ? console.log("address public BASE_OFT_MOCK_USDC_ADAPTER = %s;", address(oftmockusdcadapter))
+                : console.log("address public ARB_OFT_MOCK_USDC_ADAPTER = %s;", address(oftmockusdcadapter));
 
             oftmockwethadapter =
-                new OFTWETHadapter(block.chainid == 8453 ? BASE_MOCK_WETH : ARB_MOCK_WETH, address(0), endpoint, owner);
+                new OFTWETHadapter(block.chainid == 8453 ? BASE_MOCK_WETH : ARB_MOCK_WETHK, address(0), endpoint, owner);
             block.chainid == 8453
-                ? console.log("address public BASE_OFT_WETH_ADAPTER = %s;", address(oftmockwethadapter))
-                : console.log("address public ARB_OFT_WETH_ADAPTER = %s;", address(oftmockwethadapter));
+                ? console.log("address public BASE_OFT_MOCK_WETH_ADAPTER = %s;", address(oftmockwethadapter))
+                : console.log("address public ARB_OFT_MOCK_WETH_ADAPTER = %s;", address(oftmockwethadapter));
         } else {
             oftusdtadapter = OFTUSDTadapter(block.chainid == 8453 ? BASE_OFT_USDT_ADAPTER : ARB_OFT_USDTK_ADAPTER);
             oftusdcadapter = OFTUSDCadapter(block.chainid == 8453 ? BASE_OFT_USDC_ADAPTER : ARB_OFT_USDCK_ADAPTER);
             oftwbtcadapter = OFTWBTCadapter(block.chainid == 8453 ? BASE_OFT_WBTC_ADAPTER : ARB_OFT_WBTCK_ADAPTER);
             oftwethadapter = OFTWETHadapter(block.chainid == 8453 ? BASE_OFT_WETH_ADAPTER : ARB_OFT_WETHK_ADAPTER);
             oftmockusdtadapter =
-                OFTUSDTadapter(block.chainid == 8453 ? BASE_OFT_MOCK_USDT_ADAPTER : ARB_OFT_MOCK_USDT_ADAPTER);
+                OFTUSDTadapter(block.chainid == 8453 ? BASE_OFT_MOCK_USDT_ADAPTER : ARB_OFT_MOCK_USDTK_ADAPTER);
             oftmockusdcadapter =
-                OFTUSDCadapter(block.chainid == 8453 ? BASE_OFT_MOCK_USDC_ADAPTER : ARB_OFT_MOCK_USDC_ADAPTER);
+                OFTUSDCadapter(block.chainid == 8453 ? BASE_OFT_MOCK_USDC_ADAPTER : ARB_OFT_MOCK_USDCK_ADAPTER);
             oftmockwethadapter =
-                OFTWETHadapter(block.chainid == 8453 ? BASE_OFT_MOCK_WETH_ADAPTER : ARB_OFT_MOCK_WETH_ADAPTER);
+                OFTWETHadapter(block.chainid == 8453 ? BASE_OFT_MOCK_WETH_ADAPTER : ARB_OFT_MOCK_WETHK_ADAPTER);
         }
     }
 
     function _setLibraries() internal {
+        // Set delegate to the script runner for each OFT adapter
+
+        // Now configure libraries using the delegate permissions
         ILayerZeroEndpointV2(endpoint).setSendLibrary(address(oftusdtadapter), eid1, sendLib);
         ILayerZeroEndpointV2(endpoint).setSendLibrary(address(oftusdcadapter), eid1, sendLib);
         ILayerZeroEndpointV2(endpoint).setSendLibrary(address(oftwbtcadapter), eid1, sendLib);
@@ -189,6 +245,7 @@ contract OFTDeployment is Script, Helper {
         params[2] = SetConfigParam(eid1, EXECUTOR_CONFIG_TYPE, encodedExec);
         params[3] = SetConfigParam(eid1, ULN_CONFIG_TYPE, encodedUln);
 
+        // Configure send settings using delegate permissions
         ILayerZeroEndpointV2(endpoint).setConfig(address(oftusdcadapter), sendLib, params);
         ILayerZeroEndpointV2(endpoint).setConfig(address(oftusdtadapter), sendLib, params);
         ILayerZeroEndpointV2(endpoint).setConfig(address(oftwbtcadapter), sendLib, params);
@@ -214,6 +271,7 @@ contract OFTDeployment is Script, Helper {
         params[0] = SetConfigParam(eid0, RECEIVE_CONFIG_TYPE, encodedUln);
         params[1] = SetConfigParam(eid1, RECEIVE_CONFIG_TYPE, encodedUln);
 
+        // Configure receive settings using delegate permissions
         ILayerZeroEndpointV2(endpoint).setConfig(address(oftusdcadapter), receiveLib, params);
         ILayerZeroEndpointV2(endpoint).setConfig(address(oftusdtadapter), receiveLib, params);
         ILayerZeroEndpointV2(endpoint).setConfig(address(oftwbtcadapter), receiveLib, params);
@@ -232,21 +290,36 @@ contract OFTDeployment is Script, Helper {
         bytes32 oftPeer6 = bytes32(uint256(uint160(address(oftmockusdcadapter))));
         bytes32 oftPeer7 = bytes32(uint256(uint160(address(oftmockwethadapter))));
 
-        OFTUSDCadapter(oftusdcadapter).setPeer(eid0, oftPeer1);
-        OFTUSDTadapter(oftusdtadapter).setPeer(eid0, oftPeer2);
-        OFTWBTCadapter(oftwbtcadapter).setPeer(eid0, oftPeer3);
-        OFTWETHadapter(oftwethadapter).setPeer(eid0, oftPeer4);
-        OFTUSDTadapter(oftmockusdtadapter).setPeer(eid0, oftPeer5);
-        OFTUSDCadapter(oftmockusdcadapter).setPeer(eid0, oftPeer6);
-        OFTWETHadapter(oftmockwethadapter).setPeer(eid0, oftPeer7);
+        bytes32 oftPeer8 =
+            bytes32(uint256(uint160(block.chainid == 8453 ? ARB_OFT_USDCK_ADAPTER : BASE_OFT_USDC_ADAPTER)));
+        bytes32 oftPeer9 =
+            bytes32(uint256(uint160(block.chainid == 8453 ? ARB_OFT_USDTK_ADAPTER : BASE_OFT_USDT_ADAPTER)));
+        bytes32 oftPeer10 =
+            bytes32(uint256(uint160(block.chainid == 8453 ? ARB_OFT_WBTCK_ADAPTER : BASE_OFT_WBTC_ADAPTER)));
+        bytes32 oftPeer11 =
+            bytes32(uint256(uint160(block.chainid == 8453 ? ARB_OFT_WETHK_ADAPTER : BASE_OFT_WETH_ADAPTER)));
+        bytes32 oftPeer12 =
+            bytes32(uint256(uint160(block.chainid == 8453 ? ARB_OFT_MOCK_USDTK_ADAPTER : BASE_OFT_MOCK_USDT_ADAPTER)));
+        bytes32 oftPeer13 =
+            bytes32(uint256(uint160(block.chainid == 8453 ? ARB_OFT_MOCK_USDCK_ADAPTER : BASE_OFT_MOCK_USDC_ADAPTER)));
+        bytes32 oftPeer14 =
+            bytes32(uint256(uint160(block.chainid == 8453 ? ARB_OFT_MOCK_WETHK_ADAPTER : BASE_OFT_MOCK_WETH_ADAPTER)));
 
-        OFTUSDCadapter(oftusdcadapter).setPeer(eid1, oftPeer1);
-        OFTUSDTadapter(oftusdtadapter).setPeer(eid1, oftPeer2);
-        OFTWBTCadapter(oftwbtcadapter).setPeer(eid1, oftPeer3);
-        OFTWETHadapter(oftwethadapter).setPeer(eid1, oftPeer4);
-        OFTUSDTadapter(oftmockusdtadapter).setPeer(eid1, oftPeer5);
-        OFTUSDCadapter(oftmockusdcadapter).setPeer(eid1, oftPeer6);
-        OFTWETHadapter(oftmockwethadapter).setPeer(eid1, oftPeer7);
+        // OFTUSDCadapter(oftusdcadapter).setPeer(eid0, oftPeer1);
+        // OFTUSDTadapter(oftusdtadapter).setPeer(eid0, oftPeer2);
+        // OFTWBTCadapter(oftwbtcadapter).setPeer(eid0, oftPeer3);
+        // OFTWETHadapter(oftwethadapter).setPeer(eid0, oftPeer4);
+        // OFTUSDTadapter(oftmockusdtadapter).setPeer(eid0, oftPeer5);
+        // OFTUSDCadapter(oftmockusdcadapter).setPeer(eid0, oftPeer6);
+        // OFTWETHadapter(oftmockwethadapter).setPeer(eid0, oftPeer7);
+
+        OFTUSDCadapter(oftusdcadapter).setPeer(eid1, oftPeer8);
+        OFTUSDTadapter(oftusdtadapter).setPeer(eid1, oftPeer9);
+        OFTWBTCadapter(oftwbtcadapter).setPeer(eid1, oftPeer10);
+        OFTWETHadapter(oftwethadapter).setPeer(eid1, oftPeer11);
+        OFTUSDTadapter(oftmockusdtadapter).setPeer(eid1, oftPeer12);
+        OFTUSDCadapter(oftmockusdcadapter).setPeer(eid1, oftPeer13);
+        OFTWETHadapter(oftmockwethadapter).setPeer(eid1, oftPeer14);
     }
 
     function _setEnforcedOptions() internal {
@@ -282,5 +355,6 @@ contract OFTDeployment is Script, Helper {
 
 // RUN
 //
+// forge script OFTDeployment --broadcast -vvv --verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY
 // forge script OFTDeployment --broadcast -vvv
 // forge script OFTDeployment -vvv

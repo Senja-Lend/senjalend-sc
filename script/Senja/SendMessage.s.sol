@@ -56,7 +56,7 @@ contract SendMessage is Script, Helper {
             BASE_OFT_MOCK_USDT_ADAPTER,
             BASE_lendingPool,
             BASE_MOCK_USDT,
-            ARB_MOCK_USDT,
+            ARB_MOCK_USDTK,
             address(BASE_oappSupplyLiquidityUSDT),
             BASE_EID,
             amount,
@@ -69,11 +69,11 @@ contract SendMessage is Script, Helper {
 
     function _checkTokenOFT() internal view {
         if (block.chainid == 10) {
-            console.log("tokenOFT", OFTUSDTadapter(ARB_OFT_MOCK_USDT_ADAPTER).tokenOFT());
-            console.log("elevated", OFTUSDTadapter(ARB_OFT_MOCK_USDT_ADAPTER).elevatedMinterBurner());
+            console.log("tokenOFT", OFTUSDTadapter(ARB_OFT_MOCK_USDTK_ADAPTER).tokenOFT());
+            console.log("elevated", OFTUSDTadapter(ARB_OFT_MOCK_USDTK_ADAPTER).elevatedMinterBurner());
             console.log(
                 "elevated operator",
-                ElevatedMinterBurner(ARB_MOCK_USDT_ELEVATED_MINTER_BURNER).operators(ARB_OFT_MOCK_USDT_ADAPTER)
+                ElevatedMinterBurner(ARB_MOCK_USDTK_ELEVATED_MINTER_BURNER).operators(ARB_OFT_MOCK_USDTK_ADAPTER)
             );
         } else if (block.chainid == 8453) {
             console.log("tokenOFT", OFTUSDTadapter(BASE_OFT_USDT_ADAPTER).tokenOFT());
@@ -88,7 +88,7 @@ contract SendMessage is Script, Helper {
             token = ARB_USDTK;
             oappAdapter = ARB_oappAdapter;
         } else if (block.chainid == 8453) {
-            token = ARB_MOCK_USDT;
+            token = ARB_MOCK_USDTK;
         }
     }
 

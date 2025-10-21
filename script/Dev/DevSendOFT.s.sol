@@ -16,7 +16,7 @@ contract DevSendOFT is Script, Helper {
 
     function setUp() public {
         // base
-        vm.createSelectFork(vm.rpcUrl("base_mainnet"));
+        vm.createSelectFork(vm.rpcUrl("arb_mainnet"));
         // optimism
         // hyperliquid
     }
@@ -27,15 +27,15 @@ contract DevSendOFT is Script, Helper {
 
     function run() external {
         // *********FILL THIS*********
-        address oftAddress = BASE_OFT_MOCK_USDT_ADAPTER; // src
-        address minterBurner = BASE_MOCK_USDT_ELEVATED_MINTER_BURNER;
-        address TOKEN = BASE_MOCK_USDT;
+        address oftAddress = ARB_OFT_MOCK_USDTK_ADAPTER; // src
+        address minterBurner = ARB_MOCK_USDTK_ELEVATED_MINTER_BURNER;
+        address TOKEN = ARB_MOCK_USDTK;
         uint256 amount = 1e6; // amount to send
         uint256 tokensToSend = amount; // src
         uint256 privateKey = vm.envUint("PRIVATE_KEY");
         //*******
         //** DESTINATION
-        uint32 dstEid = BASE_EID; // dst
+        uint32 dstEid = ARB_EID; // dst
         //*******
         //***************************
 

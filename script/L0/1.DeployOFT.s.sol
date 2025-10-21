@@ -6,8 +6,8 @@ import {USDCk} from "../../src/BridgeToken/USDCk.sol";
 import {USDTk} from "../../src/BridgeToken/USDTk.sol";
 import {WETHk} from "../../src/BridgeToken/WETHk.sol";
 import {WBTCk} from "../../src/BridgeToken/WBTCk.sol";
-import {Helper} from "./Helper.sol";
 import {ElevatedMinterBurner} from "../../src/layerzero/ElevatedMinterBurner.sol";
+import {Helper} from "./Helper.sol";
 import {OFTUSDTadapter} from "../../src/layerzero/OFTUSDTadapter.sol";
 import {OFTWBTCadapter} from "../../src/layerzero/OFTWBTCadapter.sol";
 import {OFTWETHadapter} from "../../src/layerzero/OFTWETHadapter.sol";
@@ -26,7 +26,7 @@ contract DeployOFT is Script, Helper {
     OFTWETHadapter public oftwethadapter;
 
     function run() public {
-        // deployBASE();
+        deployBASE();
         // deployOP();
         // deployUSDCBASE();
         // deployUSDCOP();

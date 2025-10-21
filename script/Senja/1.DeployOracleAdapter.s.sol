@@ -31,5 +31,5 @@ contract DeployOracleAdapter is Script, Helper {
     }
 }
 // RUN
-// forge script DeployOracleAdapter --broadcast -vvv
+// forge script DeployOracleAdapter --broadcast -vvv --verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY
 // forge script DeployOracleAdapter -vvv
