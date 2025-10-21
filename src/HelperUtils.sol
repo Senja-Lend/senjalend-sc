@@ -13,19 +13,41 @@ import {OptionsBuilder} from "@layerzerolabs/oapp-evm/contracts/oapp/libs/Option
 import {SendParam} from "@layerzerolabs/oft-evm/contracts/interfaces/IOFT.sol";
 import {MessagingFee} from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 
+/**
+ * @title HelperUtils
+ * @author Senja Protocol
+ * @notice Utility contract providing helper functions for lending pool operations
+ * @dev This contract provides view functions for calculating health factors, APY, exchange rates, and other metrics
+ */
 contract HelperUtils {
     using OptionsBuilder for bytes;
 
+    /// @notice The address of the factory contract
     address public factory;
 
+    /**
+     * @notice Constructor to initialize the helper utils contract
+     * @param _factory The address of the factory contract
+     */
     constructor(address _factory) {
         factory = _factory;
     }
 
+    /**
+     * @notice Sets the factory address
+     * @param _factory The new factory address
+     */
     function setFactory(address _factory) public {
         factory = _factory;
     }
 
+    /**
+     * @notice Calculates the maximum amount a user can borrow
+     * @param _lendingPool The address of the lending pool
+     * @param _user The address of the user
+     * @return The maximum borrow amount available to the user
+     * @dev Takes into account both the user's collateral value and available liquidity
+     */
     function getMaxBorrowAmount(address _lendingPool, address _user) public view returns (uint256) {
         address borrowToken = _borrowToken(_lendingPool);
         uint256 totalLiquidity;
@@ -44,6 +66,15 @@ contract HelperUtils {
         return maxBorrowAmount < totalLiquidity ? maxBorrowAmount : totalLiquidity;
     }
 
+    /**
+     * @notice Calculates the exchange rate between two tokens
+     * @param _tokenIn The address of the input token
+     * @param _tokenOut The address of the output token
+     * @param _amountIn The amount of input tokens
+     * @param _position The address of the position contract
+     * @return The amount of output tokens equivalent to the input amount
+     * @dev Uses oracle price feeds to determine the exchange rate
+     */
     function getExchangeRate(address _tokenIn, address _tokenOut, uint256 _amountIn, address _position)
         public
         view
@@ -57,12 +88,26 @@ contract HelperUtils {
         return tokenValue;
     }
 
+    /**
+     * @notice Gets the current price value of a token from oracle
+     * @param _token The address of the token
+     * @return The current price of the token from the oracle
+     * @dev Returns the raw price value from the oracle without decimal adjustment
+     */
     function getTokenValue(address _token) public view returns (uint256) {
         address tokenDataStream = _tokenDataStream(_token);
         (, uint256 tokenPrice,,,) = IOracle(tokenDataStream).latestRoundData();
         return uint256(tokenPrice);
     }
 
+    /**
+     * @notice Calculates the health factor of a user's position
+     * @param _lendingPool The address of the lending pool
+     * @param _user The address of the user
+     * @return The health factor scaled by 1e8 (>1e8 is healthy, <1e8 is unhealthy)
+     * @dev Health Factor = (Collateral Value * LTV) / Borrowed Value
+     * @dev Returns special values: 69 for no debt, 6969 for no position
+     */
     function getHealthFactor(address _lendingPool, address _user) public view returns (uint256) {
         // Get user's position and borrow data
         address userPosition = _addressPositions(_lendingPool, _user);
@@ -112,6 +157,15 @@ contract HelperUtils {
         return healthFactor; // >1e8 is healthy, <1e8 is unhealthy
     }
 
+    /**
+     * @notice Calculates the LayerZero messaging fee for cross-chain token transfer
+     * @param _oftAddress The address of the OFT adapter contract
+     * @param _dstEid The destination endpoint ID (LayerZero chain ID)
+     * @param _toAddress The recipient address on the destination chain
+     * @param _tokensToSend The amount of tokens to send
+     * @return The native fee required for the cross-chain message
+     * @dev Uses LayerZero's OFT adapter to get fee quote for token bridging
+     */
     function getFee(address _oftAddress, uint32 _dstEid, address _toAddress, uint256 _tokensToSend)
         public
         view
@@ -250,6 +304,12 @@ contract HelperUtils {
         return (supplyAPY, borrowAPY, utilizationRate, totalSupplyAssets, totalBorrowAssets);
     }
 
+    /**
+     * @notice Gets the total available liquidity in a lending pool
+     * @param _lendingPool The address of the lending pool
+     * @return totalLiquidity The total amount of borrow tokens available in the pool
+     * @dev Checks the pool's balance of the borrow token (WETH or ERC20)
+     */
     function getTotalLiquidity(address _lendingPool) public view returns (uint256 totalLiquidity) {
         address borrowToken = ILPRouter(_router(_lendingPool)).borrowToken();
         if (borrowToken == address(1)) {
@@ -260,6 +320,13 @@ contract HelperUtils {
         return totalLiquidity;
     }
 
+    /**
+     * @notice Gets the collateral balance for a user in a lending pool
+     * @param _lendingPool The address of the lending pool
+     * @param _user The address of the user
+     * @return collateralBalance The amount of collateral tokens in the user's position
+     * @dev Checks the user's position contract balance for collateral tokens
+     */
     function getCollateralBalance(address _lendingPool, address _user)
         public
         view
@@ -275,10 +342,22 @@ contract HelperUtils {
         return collateralBalance;
     }
 
+    /**
+     * @notice Gets the router address for a lending pool
+     * @param _lendingPool The address of the lending pool
+     * @return The address of the lending pool router
+     */
     function getRouter(address _lendingPool) public view returns (address) {
         return ILendingPool(_lendingPool).router();
     }
 
+    /**
+     * @notice Internal function to calculate the value of user's collateral
+     * @param _lendingPool The address of the lending pool
+     * @param _user The address of the user
+     * @return The collateral value in terms of the borrow token
+     * @dev Uses oracle prices to convert collateral token value to borrow token value
+     */
     function _calculateCollateralValue(address _lendingPool, address _user) internal view returns (uint256) {
         address collateralToken = _collateralToken(_lendingPool);
         address borrowToken = _borrowToken(_lendingPool);
@@ -300,6 +379,13 @@ contract HelperUtils {
         return position.tokenCalculator(collateralToken, borrowToken, collateralBalance, _tokenInPrice, _tokenOutPrice);
     }
 
+    /**
+     * @notice Internal function to calculate the current borrow amount for a user
+     * @param _lendingPool The address of the lending pool
+     * @param _user The address of the user
+     * @return The current borrow amount in borrow tokens
+     * @dev Converts user's borrow shares to borrow assets
+     */
     function _calculateCurrentBorrowAmount(address _lendingPool, address _user) internal view returns (uint256) {
         uint256 totalBorrowAssets = _totalBorrowAssets(_lendingPool);
         uint256 totalBorrowShares = _totalBorrowShares(_lendingPool);
@@ -308,46 +394,57 @@ contract HelperUtils {
         return totalBorrowAssets == 0 ? 0 : (userBorrowShares * totalBorrowAssets) / totalBorrowShares;
     }
 
+    /// @dev Gets the router interface for a lending pool
     function _router(address _lendingPool) internal view returns (ILPRouter) {
         return ILPRouter(ILendingPool(_lendingPool).router());
     }
 
+    /// @dev Gets the borrow token address from the router
     function _borrowToken(address _lendingPool) internal view returns (address) {
         return _router(_lendingPool).borrowToken();
     }
 
+    /// @dev Gets the collateral token address from the router
     function _collateralToken(address _lendingPool) internal view returns (address) {
         return _router(_lendingPool).collateralToken();
     }
 
+    /// @dev Gets the LTV ratio from the router
     function _ltv(address _lendingPool) internal view returns (uint256) {
         return _router(_lendingPool).ltv();
     }
 
+    /// @dev Gets the user's position address from the router
     function _addressPositions(address _lendingPool, address _user) internal view returns (address) {
         return _router(_lendingPool).addressPositions(_user);
     }
 
+    /// @dev Gets the total borrow assets from the router
     function _totalBorrowAssets(address _lendingPool) internal view returns (uint256) {
         return _router(_lendingPool).totalBorrowAssets();
     }
 
+    /// @dev Gets the total borrow shares from the router
     function _totalBorrowShares(address _lendingPool) internal view returns (uint256) {
         return _router(_lendingPool).totalBorrowShares();
     }
 
+    /// @dev Gets the user's borrow shares from the router
     function _userBorrowShares(address _lendingPool, address _user) internal view returns (uint256) {
         return _router(_lendingPool).userBorrowShares(_user);
     }
 
+    /// @dev Gets the token data stream (oracle) address from the factory
     function _tokenDataStream(address _token) internal view returns (address) {
         return IFactory(factory).tokenDataStream(_token);
     }
 
+    /// @dev Converts an address to bytes32
     function _addressToBytes32(address _address) internal pure returns (bytes32) {
         return bytes32(uint256(uint160(_address)));
     }
 
+    /// @dev Gets the WETH address from the factory
     function _WETH() internal view returns (address) {
         return IFactory(factory).WETH();
     }

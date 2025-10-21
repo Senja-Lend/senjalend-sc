@@ -57,24 +57,34 @@ contract Oracle is Ownable {
         oracle = _oracle;
     }
 
+    /**
+     * @notice Sets the oracle address
+     * @param _oracle The new oracle address to use for price data
+     * @dev Only callable by the owner
+     */
     function setOracle(address _oracle) public onlyOwner {
         oracle = _oracle;
     }
 
     /**
-     * @dev Returns the latest round data in Chainlink format
+     * @notice Returns the latest round data in Chainlink format
+     * @dev Fetches data from the underlying oracle contract
      * @return idRound The round ID
-     * @return priceAnswer The current priceAnswer
+     * @return priceAnswer The current price answer
      * @return startedAt Timestamp when the round started
      * @return updated Timestamp when the price was last updated
      * @return answeredInRound The round ID in which the answer was computed
-     * @notice This function mimics Chainlink's latestRoundData interface
      */
     function latestRoundData() public view returns (uint80, uint256, uint256, uint256, uint80) {
         (uint80 idRound, int256 priceAnswer, uint256 updated) = IOrakl(oracle).latestRoundData();
         return (idRound, uint256(priceAnswer), startedAt, updated, answeredInRound);
     }
 
+    /**
+     * @notice Returns the number of decimals used by the oracle
+     * @dev Fetches decimals from the underlying oracle contract
+     * @return The number of decimal places
+     */
     function decimals() public view returns (uint8) {
         return IOrakl(oracle).decimals();
     }

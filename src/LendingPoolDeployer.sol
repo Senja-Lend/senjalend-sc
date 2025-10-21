@@ -15,31 +15,54 @@ import {LendingPool} from "./LendingPool.sol";
  * operations for a specific token pair.
  */
 contract LendingPoolDeployer {
+    /// @notice Error thrown when caller is not the factory
     error OnlyFactoryCanCall();
+    /// @notice Error thrown when caller is not the owner
     error OnlyOwnerCanCall();
 
-    // Factory address
+    /// @notice The address of the factory contract
     address public factory;
+    /// @notice The address of the owner
     address public owner;
 
+    /**
+     * @notice Constructor to initialize the deployer
+     * @dev Sets the deployer as the initial owner
+     */
     constructor() {
         owner = msg.sender;
     }
 
+    /**
+     * @notice Modifier to restrict function access to factory only
+     * @dev Reverts if caller is not the factory
+     */
     modifier onlyFactory() {
         _onlyFactory();
         _;
     }
 
+    /**
+     * @notice Internal function to check if caller is factory
+     * @dev Reverts with OnlyFactoryCanCall if caller is not the factory
+     */
     function _onlyFactory() internal view {
         if (msg.sender != factory) revert OnlyFactoryCanCall();
     }
 
+    /**
+     * @notice Modifier to restrict function access to owner only
+     * @dev Reverts if caller is not the owner
+     */
     modifier onlyOwner() {
         _onlyOwner();
         _;
     }
 
+    /**
+     * @notice Internal function to check if caller is owner
+     * @dev Reverts with OnlyOwnerCanCall if caller is not the owner
+     */
     function _onlyOwner() internal view {
         if (msg.sender != owner) revert OnlyOwnerCanCall();
     }
@@ -64,6 +87,11 @@ contract LendingPoolDeployer {
         return address(lendingPool);
     }
 
+    /**
+     * @notice Sets the factory address
+     * @param _factory The new factory address
+     * @dev Only callable by owner
+     */
     function setFactory(address _factory) public onlyOwner {
         factory = _factory;
     }

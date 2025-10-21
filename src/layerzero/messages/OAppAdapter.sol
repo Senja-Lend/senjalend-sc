@@ -10,7 +10,24 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
+/**
+ * @title OAppAdapter
+ * @author Senja Protocol
+ * @notice Adapter for coordinating cross-chain token transfers and liquidity operations
+ * @dev Combines OFT token bridging with OApp messaging for liquidity supply operations
+ */
 contract OAppAdapter is ReentrancyGuard {
+    /// @notice Emitted when tokens are bridged cross-chain with OApp message
+    /// @param _oapp The OApp contract address
+    /// @param _oft The OFT adapter address
+    /// @param _lendingPoolDst The destination lending pool address
+    /// @param _tokenSrc The source token address
+    /// @param _tokenDst The destination token address
+    /// @param _toAddress The recipient address
+    /// @param _dstEid The destination endpoint ID
+    /// @param _amount The amount bridged
+    /// @param _oftFee The OFT fee paid
+    /// @param _oappFee The OApp fee paid
     event sendBridgeOApp(
         address _oapp,
         address _oft,
@@ -27,6 +44,20 @@ contract OAppAdapter is ReentrancyGuard {
     using SafeERC20 for IERC20;
     using OptionsBuilder for bytes;
 
+    /**
+     * @notice Sends tokens cross-chain and supplies liquidity on destination
+     * @param _oapp The OApp contract address for messaging
+     * @param _oft The OFT adapter address for token bridging
+     * @param _lendingPoolDst The destination lending pool address
+     * @param _tokenSrc The source token address
+     * @param _tokenDst The destination token address
+     * @param _toAddress The recipient address
+     * @param _dstEid The destination endpoint ID
+     * @param _amount The amount to bridge
+     * @param _oftFee The OFT fee to pay
+     * @param _oappFee The OApp messaging fee to pay
+     * @dev Coordinates both token transfer via OFT and message via OApp
+     */
     function sendBridge(
         address _oapp,
         address _oft,
@@ -49,6 +80,16 @@ contract OAppAdapter is ReentrancyGuard {
         );
     }
 
+    /**
+     * @notice Internal utility function to prepare OFT send parameters
+     * @param _dstEid The destination endpoint ID
+     * @param _toAddress The recipient address
+     * @param _amount The amount to send
+     * @param _oft The OFT adapter address
+     * @return sendParam The prepared send parameters
+     * @return fee The messaging fee quote
+     * @dev Builds the SendParam struct and gets fee quote from OFT
+     */
     function _utils(uint32 _dstEid, address _toAddress, uint256 _amount, address _oft)
         internal
         view
@@ -69,6 +110,12 @@ contract OAppAdapter is ReentrancyGuard {
         fee = OFTAdapter(_oft).quoteSend(sendParam, false);
     }
 
+    /**
+     * @notice Converts an address to bytes32 format
+     * @param _addr The address to convert
+     * @return The bytes32 representation of the address
+     * @dev Used for LayerZero message encoding
+     */
     function _addressToBytes32(address _addr) internal pure returns (bytes32) {
         return bytes32(uint256(uint160(_addr)));
     }

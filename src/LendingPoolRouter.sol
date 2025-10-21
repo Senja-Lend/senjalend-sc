@@ -60,6 +60,15 @@ contract LendingPoolRouter {
     /// @notice Loan-to-value ratio in basis points
     uint256 public ltv;
 
+    /**
+     * @notice Constructor to initialize the lending pool router
+     * @param _lendingPool The address of the lending pool contract
+     * @param _factory The address of the factory contract
+     * @param _collateralToken The address of the collateral token
+     * @param _borrowToken The address of the borrow token
+     * @param _ltv The loan-to-value ratio in basis points (e.g., 8000 = 80%)
+     * @dev Initializes all core parameters and sets the initial accrual timestamp
+     */
     constructor(address _lendingPool, address _factory, address _collateralToken, address _borrowToken, uint256 _ltv) {
         lendingPool = _lendingPool;
         factory = _factory;
@@ -69,28 +78,56 @@ contract LendingPoolRouter {
         lastAccrued = block.timestamp;
     }
 
+    /**
+     * @notice Modifier to restrict function access to factory only
+     * @dev Reverts if caller is not the factory
+     */
     modifier onlyFactory() {
         _onlyFactory();
         _;
     }
 
+    /**
+     * @notice Modifier to restrict function access to lending pool only
+     * @dev Reverts if caller is not the lending pool
+     */
     modifier onlyLendingPool() {
         _onlyLendingPool();
         _;
     }
 
+    /**
+     * @notice Internal function to check if caller is factory
+     * @dev Reverts with NotFactory if caller is not the factory
+     */
     function _onlyFactory() internal view {
         if (msg.sender != factory) revert NotFactory();
     }
 
+    /**
+     * @notice Internal function to check if caller is lending pool
+     * @dev Reverts with NotLendingPool if caller is not the lending pool
+     */
     function _onlyLendingPool() internal view {
         if (msg.sender != lendingPool) revert NotLendingPool();
     }
 
+    /**
+     * @notice Sets the lending pool address
+     * @param _lendingPool The new lending pool address
+     * @dev Only callable by factory
+     */
     function setLendingPool(address _lendingPool) public onlyFactory {
         lendingPool = _lendingPool;
     }
 
+    /**
+     * @notice Supplies liquidity to the pool
+     * @param _amount The amount of tokens to supply
+     * @param _user The address of the user supplying liquidity
+     * @return shares The amount of shares minted to the user
+     * @dev Only callable by lending pool. Mints shares proportional to supplied amount
+     */
     function supplyLiquidity(uint256 _amount, address _user) public onlyLendingPool returns (uint256 shares) {
         if (_amount == 0) revert ZeroAmount();
         shares = 0;
@@ -107,6 +144,13 @@ contract LendingPoolRouter {
         return shares;
     }
 
+    /**
+     * @notice Withdraws liquidity from the pool by redeeming shares
+     * @param _shares The amount of shares to redeem
+     * @param _user The address of the user withdrawing liquidity
+     * @return amount The amount of tokens withdrawn
+     * @dev Only callable by lending pool. Burns shares and checks liquidity constraints
+     */
     function withdrawLiquidity(uint256 _shares, address _user) public onlyLendingPool returns (uint256 amount) {
         if (_shares == 0) revert ZeroAmount();
         if (_shares > userSupplyShares[_user]) revert InsufficientShares();
@@ -124,10 +168,23 @@ contract LendingPoolRouter {
         return amount;
     }
 
+    /**
+     * @notice Records collateral supplied by a user
+     * @param _user The address of the user supplying collateral
+     * @param _amount The amount of collateral supplied
+     * @dev Only callable by lending pool. Updates user's collateral balance
+     */
     function supplyCollateral(address _user, uint256 _amount) public onlyLendingPool {
         userCollateral[_user] += _amount;
     }
 
+    /**
+     * @notice Withdraws collateral for a user
+     * @param _amount The amount of collateral to withdraw
+     * @param _user The address of the user withdrawing collateral
+     * @return The remaining collateral balance after withdrawal
+     * @dev Only callable by lending pool. Checks health of position after withdrawal
+     */
     function withdrawCollateral(uint256 _amount, address _user) public onlyLendingPool returns (uint256) {
         if (userCollateral[_user] < _amount) revert InsufficientCollateral();
 
@@ -199,8 +256,8 @@ contract LendingPoolRouter {
     }
 
     /**
-     * @dev Calculate supply rate based on borrow rate and utilization
-     * Supply rate = Borrow rate * Utilization rate * (1 - reserve factor)
+     * @notice Calculate supply rate based on borrow rate and utilization
+     * @dev Supply rate = Borrow rate * Utilization rate * (1 - reserve factor)
      * @return supplyRate The annual supply rate in percentage (scaled by 100)
      */
     function calculateSupplyRate() public view returns (uint256 supplyRate) {
@@ -218,6 +275,11 @@ contract LendingPoolRouter {
         return supplyRate;
     }
 
+    /**
+     * @notice Accrues interest to the pool based on time elapsed
+     * @dev Uses dynamic interest rate based on utilization. Updates total supply and borrow assets
+     * @dev Reserves 10% of interest for protocol, remaining goes to suppliers
+     */
     function accrueInterest() public {
         // Use dynamic interest rate based on utilization
         uint256 borrowRate = calculateBorrowRate();
@@ -236,6 +298,15 @@ contract LendingPoolRouter {
         lastAccrued = block.timestamp;
     }
 
+    /**
+     * @notice Borrows debt from the pool
+     * @param _amount The amount to borrow
+     * @param _user The address of the user borrowing
+     * @return protocolFee The protocol fee (0.1% of borrow amount)
+     * @return userAmount The amount sent to user (amount - protocol fee)
+     * @return shares The amount of borrow shares minted
+     * @dev Only callable by lending pool. Mints borrow shares and checks health
+     */
     function borrowDebt(uint256 _amount, address _user)
         public
         onlyLendingPool
@@ -273,6 +344,16 @@ contract LendingPoolRouter {
         return (protocolFee, userAmount, shares);
     }
 
+    /**
+     * @notice Repays debt by burning borrow shares
+     * @param _shares The amount of borrow shares to burn
+     * @param _user The address of the user repaying
+     * @return borrowAmount The amount of borrow tokens required for repayment
+     * @return User's remaining borrow shares
+     * @return Total remaining borrow shares
+     * @return Total remaining borrow assets
+     * @dev Only callable by lending pool. Burns shares and updates borrow state
+     */
     function repayWithSelectedToken(uint256 _shares, address _user)
         public
         onlyLendingPool
@@ -289,6 +370,12 @@ contract LendingPoolRouter {
         return (borrowAmount, userBorrowShares[_user], totalBorrowShares, totalBorrowAssets);
     }
 
+    /**
+     * @notice Creates a new position contract for a user
+     * @param _user The address of the user to create position for
+     * @return The address of the newly created position contract
+     * @dev Only callable by lending pool. Deploys new Position contract via PositionDeployer
+     */
     function createPosition(address _user) public onlyLendingPool returns (address) {
         if (addressPositions[_user] != address(0)) revert PositionAlreadyCreated();
         address position = IPositionDeployer(_positionDeployer()).deployPosition(lendingPool, _user);

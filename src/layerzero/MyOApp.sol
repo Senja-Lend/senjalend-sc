@@ -5,6 +5,13 @@ import {OApp, Origin, MessagingFee} from "@layerzerolabs/oapp-evm/contracts/oapp
 import {OAppOptionsType3} from "@layerzerolabs/oapp-evm/contracts/oapp/libs/OAppOptionsType3.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
+/**
+ * @title MyOApp
+ * @author Senja Protocol
+ * @notice Example Omnichain Application using LayerZero V2
+ * @dev Demonstrates sending and receiving messages across chains using LayerZero
+ * This is a template OApp for cross-chain messaging
+ */
 contract MyOApp is OApp, OAppOptionsType3 {
     /// @notice Last string received from any remote chain
     string public lastMessage;

@@ -16,49 +16,126 @@ import {ILPRouter} from "./interfaces/ILPRouter.sol";
 import {IWETH} from "./interfaces/IWETH.sol";
 import {ILiquidator} from "./interfaces/ILiquidator.sol";
 
+/**
+ * @title LendingPool
+ * @author Senja Protocol
+ * @notice Main lending pool contract that handles user interactions for supplying liquidity, collateral, borrowing and repayment
+ * @dev This contract acts as the interface layer for users to interact with the lending protocol
+ * It manages liquidity supply/withdrawal, collateral management, cross-chain borrowing via LayerZero, and liquidations
+ */
 contract LendingPool is ReentrancyGuard {
     using SafeERC20 for IERC20;
     using OptionsBuilder for bytes;
 
+    // ============ Errors ============
+    
+    /// @notice Error thrown when collateral amount is insufficient
     error InsufficientCollateral();
+    /// @notice Error thrown when liquidity in the pool is insufficient
     error InsufficientLiquidity();
+    /// @notice Error thrown when user has insufficient shares
     error InsufficientShares();
+    /// @notice Error thrown when loan-to-value ratio exceeds maximum allowed
     error LTVExceedMaxAmount();
+    /// @notice Error thrown when position already exists for user
     error PositionAlreadyCreated();
+    /// @notice Error thrown when token is not available in the protocol
     error TokenNotAvailable();
+    /// @notice Error thrown when amount is zero
     error ZeroAmount();
+    /// @notice Error thrown when borrow shares are insufficient
     error InsufficientBorrowShares();
+    /// @notice Error thrown when amount of shares is invalid
     error amountSharesInvalid();
+    /// @notice Error thrown when caller is not an operator
     error NotOperator();
+    /// @notice Error thrown when executor is not authorized
+    /// @param executor The address of the unauthorized executor
     error NotAuthorized(address executor);
+    /// @notice Error thrown when transfer fails
     error TransferFailed();
+    /// @notice Error thrown when parameter is invalid
     error InvalidParameter();
+    /// @notice Error thrown when contract balance is insufficient
     error InsufficientContractBalance();
 
+    // ============ Events ============
+    
+    /// @notice Emitted when liquidity is supplied to the pool
+    /// @param user The address of the user supplying liquidity
+    /// @param amount The amount of tokens supplied
+    /// @param shares The amount of shares minted
     event SupplyLiquidity(address user, uint256 amount, uint256 shares);
+    
+    /// @notice Emitted when liquidity is withdrawn from the pool
+    /// @param user The address of the user withdrawing liquidity
+    /// @param amount The amount of tokens withdrawn
+    /// @param shares The amount of shares burned
     event WithdrawLiquidity(address user, uint256 amount, uint256 shares);
+    
+    /// @notice Emitted when collateral is supplied to a position
+    /// @param user The address of the user supplying collateral
+    /// @param amount The amount of collateral supplied
     event SupplyCollateral(address user, uint256 amount);
+    
+    /// @notice Emitted when debt is repaid by a position
+    /// @param user The address of the user repaying debt
+    /// @param amount The amount of debt repaid
+    /// @param shares The amount of borrow shares burned
     event RepayByPosition(address user, uint256 amount, uint256 shares);
+    
+    /// @notice Emitted when a new position is created
+    /// @param user The address of the user creating the position
+    /// @param positionAddress The address of the newly created position
     event CreatePosition(address user, address positionAddress);
+    
+    /// @notice Emitted when debt is borrowed cross-chain
+    /// @param user The address of the user borrowing
+    /// @param amount The amount borrowed
+    /// @param shares The amount of borrow shares minted
+    /// @param chainId The destination chain ID
+    /// @param addExecutorLzReceiveOption The LayerZero executor gas option
     event BorrowDebtCrosschain(
         address user, uint256 amount, uint256 shares, uint256 chainId, uint256 addExecutorLzReceiveOption
     );
+    
+    /// @notice Emitted when interest rate model is updated
+    /// @param oldModel The address of the old interest rate model
+    /// @param newModel The address of the new interest rate model
     event InterestRateModelSet(address indexed oldModel, address indexed newModel);
 
+    // ============ State Variables ============
+    
+    /// @notice The address of the lending pool router
     address public router;
 
-    // Track if we're in a withdrawal operation to avoid auto-wrapping
+    /// @dev Flag to track if we're in a withdrawal operation to avoid auto-wrapping ETH
     bool private _withdrawing;
 
+    /**
+     * @notice Constructor to initialize the lending pool
+     * @param _router The address of the lending pool router
+     * @dev Sets the router address that manages core protocol logic
+     */
     constructor(address _router) {
         router = _router;
     }
 
+    /**
+     * @notice Modifier to ensure user has a position or create one if it doesn't exist
+     * @param _user The address of the user to check
+     * @dev Automatically creates a position if one doesn't exist for the user
+     */
     modifier positionRequired(address _user) {
         _positionRequired(_user);
         _;
     }
 
+    /**
+     * @notice Modifier to check if caller is authorized to act on behalf of user
+     * @param _user The address of the user
+     * @dev Only allows protocol operators or the user themselves to proceed
+     */
     modifier accessControl(address _user) {
         _accessControl(_user);
         _;
@@ -289,12 +366,22 @@ contract LendingPool is ReentrancyGuard {
         emit RepayByPosition(_user, borrowAmount, shares);
     }
 
+    /**
+     * @notice Internal function to check access control
+     * @param _user The address of the user
+     * @dev Reverts if caller is not an operator and not the user themselves
+     */
     function _accessControl(address _user) internal view {
         if (!IFactory(_factory()).operator(msg.sender)) {
             if (msg.sender != _user) revert NotAuthorized(msg.sender);
         }
     }
 
+    /**
+     * @notice Internal function to check if user has a position and create one if not
+     * @param _user The address of the user
+     * @dev Creates a new position contract for the user if they don't have one
+     */
     function _positionRequired(address _user) internal {
         if (_addressPositions(_user) == address(0)) {
             _createPosition(_user);
@@ -313,38 +400,88 @@ contract LendingPool is ReentrancyGuard {
         emit CreatePosition(_user, _addressPositions(_user));
     }
 
+    /**
+     * @notice Gets the borrow token address from the router
+     * @return The address of the borrow token
+     * @dev Returns address(1) for native tokens
+     */
     function _borrowToken() internal view returns (address) {
         return ILPRouter(router).borrowToken();
     }
 
+    /**
+     * @notice Gets the collateral token address from the router
+     * @return The address of the collateral token
+     * @dev Returns address(1) for native tokens
+     */
     function _collateralToken() internal view returns (address) {
         return ILPRouter(router).collateralToken();
     }
 
+    /**
+     * @notice Gets the loan-to-value ratio from the router
+     * @return The LTV ratio (in 18 decimals)
+     */
     function _ltv() internal view returns (uint256) {
         return ILPRouter(router).ltv();
     }
 
+    /**
+     * @notice Gets the user's borrow shares from the router
+     * @param _user The address of the user
+     * @return The amount of borrow shares owned by the user
+     */
     function _userBorrowShares(address _user) internal view returns (uint256) {
         return ILPRouter(router).userBorrowShares(_user);
     }
 
+    /**
+     * @notice Gets the user's position address from the router
+     * @param _user The address of the user
+     * @return The address of the user's position contract
+     */
     function _addressPositions(address _user) internal view returns (address) {
         return ILPRouter(router).addressPositions(_user);
     }
 
+    /**
+     * @notice Internal function to supply liquidity via the router
+     * @param _amount The amount of tokens to supply
+     * @param _user The address of the user supplying liquidity
+     * @return The amount of shares minted
+     */
     function _supplyLiquidity(uint256 _amount, address _user) internal returns (uint256) {
         return ILPRouter(router).supplyLiquidity(_amount, _user);
     }
 
+    /**
+     * @notice Internal function to withdraw liquidity via the router
+     * @param _shares The amount of shares to redeem
+     * @return The amount of tokens withdrawn
+     */
     function _withdrawLiquidity(uint256 _shares) internal returns (uint256) {
         return ILPRouter(router).withdrawLiquidity(_shares, msg.sender);
     }
 
+    /**
+     * @notice Internal function to borrow debt via the router
+     * @param _amount The amount to borrow
+     * @param _user The address of the user borrowing
+     * @return protocolFee The protocol fee charged
+     * @return userAmount The amount sent to the user
+     * @return shares The amount of borrow shares minted
+     */
     function _borrowDebt(uint256 _amount, address _user) internal returns (uint256, uint256, uint256) {
         return ILPRouter(router).borrowDebt(_amount, _user);
     }
 
+    /**
+     * @notice Internal function to repay debt with selected token via the router
+     * @param _shares The amount of borrow shares to repay
+     * @param _user The address of the user repaying
+     * @return borrowAmount The amount of borrow tokens required
+     * @return Additional return values from the router
+     */
     function _repayWithSelectedToken(uint256 _shares, address _user)
         internal
         returns (uint256, uint256, uint256, uint256)
@@ -352,26 +489,50 @@ contract LendingPool is ReentrancyGuard {
         return ILPRouter(router).repayWithSelectedToken(_shares, _user);
     }
 
+    /**
+     * @notice Gets the total borrow assets from the router
+     * @return The total amount of borrowed assets in the pool
+     */
     function _totalBorrowAssets() internal view returns (uint256) {
         return ILPRouter(router).totalBorrowAssets();
     }
 
+    /**
+     * @notice Gets the total borrow shares from the router
+     * @return The total amount of borrow shares issued
+     */
     function _totalBorrowShares() internal view returns (uint256) {
         return ILPRouter(router).totalBorrowShares();
     }
 
+    /**
+     * @notice Gets the factory address from the router
+     * @return The address of the factory contract
+     */
     function _factory() internal view returns (address) {
         return ILPRouter(router).factory();
     }
 
+    /**
+     * @notice Gets the protocol address from the factory
+     * @return The address of the protocol contract
+     */
     function _protocol() internal view returns (address) {
         return IFactory(_factory()).protocol();
     }
 
+    /**
+     * @notice Gets the WETH address from the factory
+     * @return The address of the WETH contract
+     */
     function _WETH() internal view returns (address) {
         return IFactory(_factory()).WETH();
     }
 
+    /**
+     * @notice Gets the liquidator address from the IsHealthy contract
+     * @return The address of the liquidator contract
+     */
     function _liquidator() internal view returns (address) {
         return IIsHealthy(_factory()).liquidator();
     }
@@ -434,6 +595,11 @@ contract LendingPool is ReentrancyGuard {
         );
     }
 
+    /**
+     * @notice Allows the contract to receive native tokens and automatically wraps them to WETH
+     * @dev Only wraps tokens if this is a native token pool and not during withdrawal
+     * @dev Prevents accidental loss by reverting on unexpected native token transfers
+     */
     receive() external payable {
         // Only auto-wrap if this is the native token lending pool and not during withdrawal
         if (msg.value > 0 && !_withdrawing && (_borrowToken() == address(1) || _collateralToken() == address(1))) {
@@ -447,6 +613,10 @@ contract LendingPool is ReentrancyGuard {
         }
     }
 
+    /**
+     * @notice Fallback function that rejects all calls with data
+     * @dev Prevents accidental interactions and loss of funds
+     */
     fallback() external payable {
         // Fallback should not accept native tokens to prevent accidental loss
         revert("Fallback not allowed");

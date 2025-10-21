@@ -92,15 +92,19 @@ contract LendingPoolFactory is
     /// @notice The address of the protocol contract
     address public protocol;
 
+    /// @notice The address of the position deployer contract
     address public positionDeployer;
 
+    /// @notice WETH address on Base mainnet
     address public constant WETH = 0x4200000000000000000000000000000000000006;
 
     /// @notice Mapping from token address to its data stream address
     mapping(address => address) public tokenDataStream;
 
+    /// @notice Mapping from operator address to their status
     mapping(address => bool) public operator;
 
+    /// @notice Mapping from token to its OFT adapter address for cross-chain operations
     mapping(address => address) public oftAddress; // token => oftaddress
 
     /// @notice Array of all created pools
@@ -112,21 +116,42 @@ contract LendingPoolFactory is
     /// @notice VERSION Upgraded
     uint8 public constant VERSION = 2;
 
-    /// @notice The address of the lending pool deployer contract
+    /// @notice The address of the lending pool router deployer contract
     address public lendingPoolRouterDeployer;
 
+    /**
+     * @notice Constructor that disables initializers for UUPS proxy pattern
+     * @dev Prevents initialization of the implementation contract
+     */
     constructor() {
         _disableInitializers();
     }
 
+    /**
+     * @notice Pauses all pausable operations in the contract
+     * @dev Only callable by addresses with PAUSER_ROLE
+     */
     function pause() public onlyRole(PAUSER_ROLE) {
         _pause();
     }
 
+    /**
+     * @notice Unpauses all pausable operations in the contract
+     * @dev Only callable by addresses with PAUSER_ROLE
+     */
     function unpause() public onlyRole(PAUSER_ROLE) {
         _unpause();
     }
 
+    /**
+     * @notice Initializes the factory contract with core addresses
+     * @param _isHealthy The address of the IsHealthy contract
+     * @param _lendingPoolRouterDeployer The address of the lending pool router deployer
+     * @param _lendingPoolDeployer The address of the lending pool deployer
+     * @param _protocol The address of the protocol contract
+     * @param _positionDeployer The address of the position deployer
+     * @dev This function can only be called once due to the initializer modifier
+     */
     function initialize(
         address _isHealthy,
         address _lendingPoolRouterDeployer,
@@ -190,36 +215,73 @@ contract LendingPoolFactory is
         emit TokenDataStreamAdded(_token, _dataStream);
     }
 
+    /**
+     * @notice Sets the operator status for an address
+     * @param _operator The address to set operator status for
+     * @param _status The operator status (true = operator, false = not operator)
+     * @dev Only callable by addresses with OWNER_ROLE
+     */
     function setOperator(address _operator, bool _status) public onlyRole(OWNER_ROLE) {
         operator[_operator] = _status;
         emit OperatorSet(_operator, _status);
     }
 
+    /**
+     * @notice Sets the OFT (Omnichain Fungible Token) adapter address for a token
+     * @param _token The address of the token
+     * @param _oftAddress The address of the OFT adapter for cross-chain operations
+     * @dev Only callable by addresses with OWNER_ROLE
+     */
     function setOftAddress(address _token, address _oftAddress) public onlyRole(OWNER_ROLE) {
         oftAddress[_token] = _oftAddress;
         emit OftAddressSet(_token, _oftAddress);
     }
 
+    /**
+     * @notice Sets the lending pool deployer address
+     * @param _lendingPoolDeployer The new lending pool deployer address
+     * @dev Only callable by addresses with OWNER_ROLE
+     */
     function setLendingPoolDeployer(address _lendingPoolDeployer) public onlyRole(OWNER_ROLE) {
         lendingPoolDeployer = _lendingPoolDeployer;
         emit LendingPoolDeployerSet(_lendingPoolDeployer);
     }
 
+    /**
+     * @notice Sets the protocol contract address
+     * @param _protocol The new protocol contract address
+     * @dev Only callable by addresses with OWNER_ROLE
+     */
     function setProtocol(address _protocol) public onlyRole(OWNER_ROLE) {
         protocol = _protocol;
         emit ProtocolSet(_protocol);
     }
 
+    /**
+     * @notice Sets the IsHealthy contract address
+     * @param _isHealthy The new IsHealthy contract address
+     * @dev Only callable by addresses with OWNER_ROLE
+     */
     function setIsHealthy(address _isHealthy) public onlyRole(OWNER_ROLE) {
         isHealthy = _isHealthy;
         emit IsHealthySet(_isHealthy);
     }
 
+    /**
+     * @notice Sets the position deployer address
+     * @param _positionDeployer The new position deployer address
+     * @dev Only callable by addresses with OWNER_ROLE
+     */
     function setPositionDeployer(address _positionDeployer) public onlyRole(OWNER_ROLE) {
         positionDeployer = _positionDeployer;
         emit PositionDeployerSet(_positionDeployer);
     }
 
+    /**
+     * @notice Sets the lending pool router deployer address
+     * @param _lendingPoolRouterDeployer The new lending pool router deployer address
+     * @dev Only callable by addresses with OWNER_ROLE
+     */
     function setLendingPoolRouterDeployer(address _lendingPoolRouterDeployer) public onlyRole(OWNER_ROLE) {
         lendingPoolRouterDeployer = _lendingPoolRouterDeployer;
         emit LendingPoolRouterDeployerSet(_lendingPoolRouterDeployer);

@@ -12,25 +12,61 @@ import {OptionsBuilder} from "@layerzerolabs/oapp-evm/contracts/oapp/libs/Option
 import {ILPRouter} from "../../interfaces/ILPRouter.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+/**
+ * @title OAppSupplyCollateralUSDT
+ * @author Senja Protocol
+ * @notice Omnichain Application for cross-chain collateral supply using USDT
+ * @dev Coordinates cross-chain token transfer and collateral supply operations
+ * Users send tokens from source chain to supply as collateral on destination chain
+ */
 contract OAppSupplyCollateralUSDT is OApp, OAppOptionsType3 {
     using OptionsBuilder for bytes;
     using SafeERC20 for IERC20;
 
+    /// @notice Error thrown when user has insufficient balance
     error InsufficientBalance();
+    /// @notice Error thrown when insufficient native fee is provided
     error InsufficientNativeFee();
 
+    /// @notice Last message received from cross-chain
     bytes public lastMessage;
+    /// @notice Factory contract address
     address public factory;
+    /// @notice OFT adapter contract address
     address public oftaddress;
 
+    /// @notice Message type constant for sending
     uint16 public constant SEND = 1;
 
+    /// @notice Emitted when collateral message is received on destination
+    /// @param lendingPool The lending pool address
+    /// @param user The user address
+    /// @param token The token address
+    /// @param amount The collateral amount
     event SendCollateralFromDst(address lendingPool, address user, address token, uint256 amount);
+    
+    /// @notice Emitted when collateral supply is initiated from source
+    /// @param lendingPool The lending pool address
+    /// @param user The user address
+    /// @param token The token address
+    /// @param amount The collateral amount
     event SendCollateralFromSrc(address lendingPool, address user, address token, uint256 amount);
+    
+    /// @notice Emitted when collateral supply is executed
+    /// @param lendingPool The lending pool address
+    /// @param token The token address
+    /// @param user The user address
+    /// @param amount The amount supplied
     event ExecuteCollateral(address lendingPool, address token, address user, uint256 amount);
 
+    /// @notice Mapping of user to their received token amount
     mapping(address => uint256) public userAmount;
 
+    /**
+     * @notice Constructor to initialize the OApp
+     * @param _endpoint The LayerZero endpoint address
+     * @param _owner The owner of the contract
+     */
     constructor(address _endpoint, address _owner) OApp(_endpoint, _owner) Ownable(_owner) {}
 
     function quoteSendString(
@@ -75,6 +111,13 @@ contract OAppSupplyCollateralUSDT is OApp, OAppOptionsType3 {
         emit SendCollateralFromDst(_lendingPool, _user, _token, _amount);
     }
 
+    /**
+     * @notice Executes the collateral supply on the destination chain
+     * @param _lendingPool The lending pool address
+     * @param _user The user address
+     * @param _amount The amount to supply as collateral
+     * @dev Can only execute if user has sufficient received tokens
+     */
     function execute(address _lendingPool, address _user, uint256 _amount) public {
         if (_amount > userAmount[_user]) revert InsufficientBalance();
         userAmount[_user] -= _amount;
@@ -154,20 +197,38 @@ contract OAppSupplyCollateralUSDT is OApp, OAppOptionsType3 {
         _lzSend(_dstEid, payload, lzOptions, MessagingFee(_lzNativeFee, 0), payable(_user));
     }
 
-    // SRC
+    /**
+     * @notice Sets the factory address
+     * @param _factory The factory address
+     * @dev Only callable by owner
+     */
     function setFactory(address _factory) public onlyOwner {
         factory = _factory;
     }
 
-    // SRC - DST
+    /**
+     * @notice Sets the OFT adapter address
+     * @param _oftaddress The OFT adapter address
+     * @dev Only callable by owner. Used on both source and destination chains
+     */
     function setOFTaddress(address _oftaddress) public onlyOwner {
         oftaddress = _oftaddress;
     }
 
+    /**
+     * @notice Gets the collateral token address from lending pool
+     * @param _lendingPool The lending pool address
+     * @return The collateral token address
+     */
     function _collateralToken(address _lendingPool) internal view returns (address) {
         return ILPRouter(ILendingPool(_lendingPool).router()).collateralToken();
     }
 
+    /**
+     * @notice Converts address to bytes32
+     * @param _address The address to convert
+     * @return The bytes32 representation
+     */
     function addressToBytes32(address _address) internal pure returns (bytes32) {
         return bytes32(uint256(uint160(_address)));
     }

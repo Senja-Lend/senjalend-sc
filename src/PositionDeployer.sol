@@ -15,19 +15,33 @@ import {Position} from "./Position.sol";
  * operations for a specific token pair.
  */
 contract PositionDeployer {
+    /// @notice Error thrown when caller is not the owner
     error OnlyOwnerCanCall();
 
+    /// @notice The address of the owner
     address public owner;
 
+    /**
+     * @notice Constructor to initialize the deployer
+     * @dev Sets the deployer as the initial owner
+     */
     constructor() {
         owner = msg.sender;
     }
 
+    /**
+     * @notice Modifier to restrict function access to owner only
+     * @dev Reverts if caller is not the owner
+     */
     modifier onlyOwner() {
         _onlyOwner();
         _;
     }
 
+    /**
+     * @notice Internal function to check if caller is owner
+     * @dev Reverts with OnlyOwnerCanCall if caller is not the owner
+     */
     function _onlyOwner() internal view {
         if (msg.sender != owner) revert OnlyOwnerCanCall();
     }
@@ -54,6 +68,11 @@ contract PositionDeployer {
         return address(position);
     }
 
+    /**
+     * @notice Sets the owner address
+     * @param _owner The new owner address
+     * @dev Only callable by current owner
+     */
     function setOwner(address _owner) public onlyOwner {
         owner = _owner;
     }
