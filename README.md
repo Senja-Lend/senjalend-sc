@@ -300,6 +300,7 @@ forge lint
 - **X (Twitter)**: https://x.com/senjalend
 - **Docs**: https://senja-lend.gitbook.io/senja-lend-docs/
 - **Demo Video**: https://youtu.be/H5bxlXstzEg
+- **Pitch Deck**: https://www.canva.com/design/DAG2trViUUk/rmPU5kpeuf8gRujxhRXVnA/edit?utm_content=DAG2trViUUk&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
 
 ## 📞 Support
 
