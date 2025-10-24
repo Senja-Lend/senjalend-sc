@@ -872,4 +872,15 @@ contract SenjaTest is Test, Helper {
         assertLt(ILPRouter(_router(lendingPool)).userBorrowShares(alice), 15e6);
         assertLt(ILPRouter(_router(lendingPool)).totalBorrowAssets(), 15e6);
     }
+
+    // RUN
+    // forge test --match-test test_get_fee -vvvv
+    function test_get_fee() public {
+        address helperGetFee = 0x8a0AB3999e64942E3A0A3227a5914319A7788253;
+
+        uint256 fee = HelperUtils(helperGetFee).getFee(BASE_OFT_MOCK_USDT_ADAPTER, ARB_EID, address(alice), 10e6);
+
+        console.log("Fee:", fee);
+
+    }
 }

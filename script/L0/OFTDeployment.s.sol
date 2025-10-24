@@ -70,13 +70,13 @@ contract OFTDeployment is Script, Helper {
         // vm.createSelectFork(vm.rpcUrl("arb_mainnet"));
         vm.startBroadcast(privateKey);
         console.log("deployed on ChainId: ", block.chainid);
-        _deployRepresentativeToken();
+        // _deployRepresentativeToken();
         _getUtils();
         _deployOFT();
-        _setLibraries();
-        _setSendConfig();
-        _setReceiveConfig();
-        _setPeers();
+        // _setLibraries();
+        // _setSendConfig();
+        // _setReceiveConfig();
+        // _setPeers();
         _setEnforcedOptions();
         vm.stopBroadcast();
     }
